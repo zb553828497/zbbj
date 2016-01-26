@@ -257,3 +257,192 @@ ViewController后面的()没有名字,所以是匿名扩展(即匿名类别).可
 
  
 
+# 第六天
+
+-  你遇到的问题，你老是忘记写这句代码   _imageView=imageView;这句其实就一个作用，就是把局部变量赋给全局变量，因为局部变量出了{}就被销毁了，必须用赋给一个全局变量,这样的话，即使出了{},也能在外面使用
+
+滚动前提:设置contenSize的尺寸+scrollEnabled属性设置为YES(是否能够滚动,默认为YES)/userInteractionEnabled属性设置为YES(是否能够能够跟用户进行交互默认为YES)
+scrollEnabled和userInteractionEnabledquiet区别:userInteractionEnabled设置为NO时,模拟器接界面上任何控件或者子控件都不能点击(都不能和用户进行交互)
+可滚动的尺寸:contentSize的尺寸减去scrollView的尺寸。如果contentSize的尺寸小于或者等于scrollView的尺寸,则不能滚动.contentSize决定图片滚动的范围
+
+
+- 通过打印%@类型的 self.scrollView.subViews 可以看到scrollView上有几个子控件  subViews数组. 
+- 箭头指向的地方表示3scrollView上有3个子控件,分别是一个imageView上的image+两个滚动条.强烈注意:image是加载到imageView上的，所以imageView多大，image就有多大。又因为imageView是加载到UIScrollView上的,因为有image->imageView->scrollView这层关系,所以最终,scrollView多大,那么image就有多大。因为scrollView是510x510，所以image的大小也是510x510
+![](06-01.png)
+
+
+- 是contentView滚动而不是scrollView滚动.scrollView里面存放的是UIImageView中的image。切记:scrollView是固定不动的.动的是contenView
+![](06-02.png)
+
+- contentOffset是scrollView的属性. 
+- 偏移量的的值：contentView的左上角的值与scrollView的左上角的值之差，就是contentOffset   偏移量(有正负)
+
+
+![](06-03.png)
+
+- 代理方法就是协议里的方法
+- 
+任何oc对象都可以作为代理，一般情况下是控制器
+
+![](06-09.png)
+![](06-10.png)
+        #import "ViewController.h"
+        #import "Car.h"
+        @interface ViewController ()
+        @property(nonatomic,strong) Car *car;
+        @end
+        
+        @implementation ViewController
+        
+        - (void)viewDidLoad {
+            //1.UIScrollView
+            UIScrollView *scrollView=[[UIScrollView alloc]init];
+            scrollView.backgroundColor=[UIColor redColor];
+            scrollView.frame=CGRectMake(20, 20, 300, 200);
+            [self.view addSubview:scrollView];
+            //2.UIImageView
+            UIImageView *imageView=[[UIImageView alloc]initWithImage:[UIImage imageNamed:@"minion"]];
+           [scrollView addSubview:imageView];
+            //3.contenSize
+           scrollView.contentSize=CGSizeMake(510, 510);
+            //设置代理
+            /*之所以会提示警告是因为,[[Car alloc]init]返回的地址是用一个等号左边的弱指针保存的.
+             点击delegate，进入文档,可以看到@property (nonatomic, weak, nullable) id <UITableViewDelegate> delegate;
+             所以可以知道,delegate是一个weak，即弱指针,所以这一行代码执行完毕之后,就立刻被销毁了。
+             若不想被销毁,左边必须用一个强指针,可以在最上方敲@property(nonatomic,strong) Car *car;用car这个强指针指向[[Car alloc]init].
+             只要控制器UIViewController在,那么Car类的对象在，Car类的对象在，那么等号左边一定是一个强指针保存等号右边的地址。
+           */
+             scrollView.delegate=[[Car alloc]init];//1   将1用两行2替代
+            
+        //    self.car=[[Car alloc]init];//2
+        //    scrollView.delegate=self.car;//2
+        }
+
+---
+                //
+        //  Car.h
+        //  a
+        //
+        //  Created by zhangbin on 16/1/26.
+        //  Copyright © 2016年 zhangbin. All rights reserved.
+        //
+        
+        #import <UIKit/UIKit.h>//头文件必须是UIKit/UIKit.h,框架若是UIScrollViewDelegate,则<UIScrollViewDelegate>添加不了
+        
+        @interface Car : NSObject<UIScrollViewDelegate>
+        
+        @end
+        
+        
+                //
+        //  Car.m
+        //  a
+        //
+        //  Created by zhangbin on 16/1/26.
+        //  Copyright © 2016年 zhangbin. All rights reserved.
+        //
+        
+        #import "Car.h"
+        
+        @implementation Car
+        
+        -(void)scrollViewDidScroll:(UIScrollView *)scrollView{
+         NSLog(@"%s",__func__);
+        }
+        @end
+
+-面试必问: 苹果为什么设计代理属性为weak？
+
+4条实线构成了一个循环,不会被销毁,所以会发生内存泄露,即内存释放不了。 代理属性设置为weak，为了防止循环引用.
+![](06-04.png)
+![](06-05.png)
+
+详细解释:
+![](06-11.png)
+
+
+
+- NSInteger是根据系统的类型来决定是长整形还是整形,所以如果出现警告,可以用ld，zd格式符来解决警告的问题
+- addTarget:<#(nullable id)#> action:<#(nonnull SEL)#> forControlEvents:<#(UIControlEvents)#>以下简写为addTarget方法.
+- 
+只要继承于UIControl的类(例如UIButton)，就可以利用addTarget方法来监该听类的对象的行为,把触发addTarget事件的对象传递进来作为addTarget方法中的参数。并且再跳转至@selector后面的另一个方法中
+
+- 因为UIButton直接继承于UIControl,而UIControl里面有addTarget方法，方法中的参数就是促发该方法的对象，一般是UIButton的对象，所以可以利用addTarget方法来监该听类的对象的行为.
+- 因为UIScrollView继承于UIView，不继承于UIButton，所以不能用UIButton里面的addTarget的方法. 而UIView里面有代理方法 delegate，所以可以用代理方法.
+![](06-06.png)
+
+- 局部变量,只要出了大括号,局部变量就不复存在,就会被销毁.
+
+- 以下两张图片的内容等价。即 通过故事版连线.实现让控制器成为scrollView的代理 等价于代码self.scrollView=self;
+![](06-07.png)
+![](06-08.png)
+
+rootViewController-->UIViewController的view-->UIView的subViews数组-->
+
+         //CGSizeMake:设置宽高
+        scrollView.contentSize=CGSizeMake(510, 510);
+        //CGRectMake:设置坐标以及宽和高
+        imageView.frame=CGRectMake(0, 0, 300, 500);
+        
+        
+---
+- 分页的标准:以scrollView的尺寸为一页
+- 
+
+- 
+- UIEdgeInsetsMake(20,30,40,50)代表的具体含义如下图。 （上坐下右）其实就是距离上边距可以多出20的像素，向左多出30的像素，向下多出40的像素,向右多出50的像素。但是多出的部分不能加任何东西，仅仅作为多出的空白区域，并且如果拖动到了多出的空白区域的时候，并不会使那个空白的区域消失，即使加了弹簧效果。
+![](06-12.png)
+
+
+![](06-13.png)
+
+
+
+- 计算contentSize的偏移量（加精） 核心:就看对应的左上角的坐标即可。
+![](06-14.png)
+
+            ////用四舍五入算法实现 当进入视野的图片(第二页)的范围大于将要消失的图片(第一页)的范围的时候，页码自动显示为第二页，而不是当第二页的图片全部进入视野，才才显示第二页。即在滚动的过程中显示页码
+            - (void)scrollViewDidScroll:(UIScrollView *)scrollView
+            {
+                // 四舍五入 (int)(小数 + 0.5)  即+0.5是别人总结出来的公式   +0.5的形式实现了四舍五入算法。
+                // 0.3->0  (int)(0.3 + 0.5)= 0.8 -> 0
+                // 0.4->0  (int)(0.4 + 0.5)= 0.9 -> 0
+                // 1.4->1  (int)(1.4 + 0.5)= 1.9 -> 1
+                // 1.6->2  (int)(1.6 + 0.5)= 2.1 -> 2
+                // 四舍五入算法技巧总结: scrollView的尺寸等于每张图片的大小，所以假设尺寸为1.
+                //                   当前x的偏移量0.3+0.5=0.8，0.8/1 ->0, 0.3根据四舍五入，得0。而0.8是通过加0.5的形式实现了四舍五入算法。
+                //                   当前x的偏移量0.4+0.5=0.9，0.9/1 ->0, 0.4根据四舍五入,得0。而0.9是通过加0.5的形式实现了四舍五入算法。
+                //                   当前x的偏移量1.4+0.5=1.9，1.9/1 ->1, 1.4根据四舍五入,得1。而1.9是通过加0.5的形式实现了四舍五入算法。
+                //                   当前x的偏移量1.6+0.5=0.9，2.1/1 ->2, 1.6根据四舍五入,得2。而2.1是通过加0.5的形式实现了四舍五入算法。
+                // 计算页码
+                int page = (int)(scrollView.contentOffset.x / scrollView.frame.size.width + 0.5);
+                
+                // 设置页码
+                self.pageControl.currentPage = page;
+            }
+
+---
+            //以下两个方法实现了，当停止滚动时，页码才显示，而不是在滚动的过程中就显示页码
+
+            - (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate
+            {
+                if (decelerate == NO) {
+                    // 计算页码
+                    int page = scrollView.contentOffset.x / scrollView.frame.size.width;
+                    
+                    // 设置页码
+                    self.pageControl.currentPage = page;
+                }
+                
+            }
+            
+            - (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+            {
+                // 计算页码
+                int page = scrollView.contentOffset.x / scrollView.frame.size.width;
+                
+                // 设置页码
+                self.pageControl.currentPage = page;
+            }
+
+
